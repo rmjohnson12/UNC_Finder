@@ -34,18 +34,20 @@ cti_tracker/
   config.py        # tracked actors (UNC5792/UNC4221 + aliases) and source URLs
   ioc.py           # passive IOC extraction and defang normalization
   stix_export.py   # validated STIX 2.1 bundle conversion/export
-  models.py        # STIX-lite dataclasses (Indicator/ThreatActor/Report/Relationship)
+  models.py        # STIX-lite Indicator/ThreatActor/Report/Relationship/Note
   tagging.py       # keyword correlation: free text -> actor names
   store.py         # SQLite persistence with upsert + times_seen tracking
   orchestrator.py  # builds context, runs agents in order, returns results
-  cli.py           # `python3 -m cti_tracker.cli run|show|digest|export-stix|actors|serve`
+  cli.py           # run/show/digest/export-stix/analyze/actors/serve
   web.py           # local read-only HTML dashboard + JSON endpoints
   agents/
     base.py            # Agent ABC, CollectorAgent base, AgentContext, AgentResult
     cisa_collector.py  # WORKING, keyless collector (with offline sample fallback)
     certua_collector.py  # official CERT-UA search/article collector
+    enrichment.py       # bounded passive RDAP/crt.sh enrichment
+    correlation.py      # shared-evidence indicator links
     threatfox_collector.py  # EXAMPLE keyed collector (skips without API key)
-    analyst.py         # summary agent; Phase 5 LLM hook lives here
+    analyst.py         # deterministic summary + optional cited LLM draft
   data/sample_cisa_feed.xml  # offline fixture so the suite always runs
 tests/
 actor-config.example.json  # template for tracking other documented actors
@@ -96,15 +98,13 @@ OpenCTI/MISP/ATT&CK later.
 - **Phase 2 (current):** CERT-UA collection, IOC extraction, change digest,
   configurable actor profiles, local dashboard, STIX 2.1 bundle export,
   and more collectors (AlienVault OTX, CISA KEV JSON).
-- **Phase 3:** enrichment + correlation — for each new domain/IP, pull WHOIS,
-  ASN, passive DNS, and **certificate transparency via crt.sh** (keyless);
-  build an `EnrichmentAgent` and a `CorrelationAgent` that links infrastructure
-  by shared certs/registrants.
+- **Phase 3 (current):** bounded passive RDAP and **certificate transparency
+  via crt.sh** enrichment, with evidence-backed links for shared certificates,
+  registrant handles, and IP network handles. Expand passive sources next.
 - **Phase 4:** detection output — generate **Sigma**/Suricata rules from
   collected IOCs and TTPs; emit a periodic digest/alert on new indicators.
-- **Phase 5:** LLM analyst — replace `AnalystAgent.run` body with an Anthropic
-  API call (key via `ANTHROPIC_API_KEY`) that drafts a narrative summary and
-  proposes new collector queries/pivots.
+- **Phase 5 (current):** LLM analyst — optional Anthropic Messages API call (key/model via
+  environment) drafts a cited narrative and passive pivots from stored evidence.
 
 **Good first tasks for an assistant:** add the CISA KEV JSON collector; add a
 crt.sh enrichment lookup for indicators of type `domain-name`; add a `digest`

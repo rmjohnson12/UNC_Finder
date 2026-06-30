@@ -110,3 +110,16 @@ class Relationship(StixObject):
         self.id = stable_id(
             "relationship", self.relationship_type, self.source_ref, self.target_ref
         )
+
+
+@dataclass
+class Note(StixObject):
+    type: str = "note"
+    abstract: str = ""
+    content: str = ""
+    object_refs: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.object_refs and self.abstract:
+            self.id = stable_id("note", self.abstract, *sorted(self.object_refs))

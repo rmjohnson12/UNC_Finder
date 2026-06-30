@@ -72,3 +72,18 @@ def test_all_returns_every_object_in_stable_order():
     finally:
         store.close()
         os.unlink(path)
+
+
+def test_paged_and_count_support_type_filters():
+    store, path = _store()
+    try:
+        for value in ("a.example", "b.example", "c.example"):
+            store.upsert(Indicator(value=value, ioc_type="domain-name"))
+        assert store.count() == 3
+        assert store.count("indicator") == 3
+        assert len(store.paged(limit=2, offset=0)) == 2
+        assert len(store.paged(limit=2, offset=2)) == 1
+        assert store.paged(stix_type="report") == []
+    finally:
+        store.close()
+        os.unlink(path)

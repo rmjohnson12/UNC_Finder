@@ -21,6 +21,10 @@ pip install -r requirements.txt
 # Collect from the configured public sources and persist to cti_tracker.db.
 python3 -m cti_tracker.cli run
 
+# Limit or disable third-party passive enrichment per run.
+python3 -m cti_tracker.cli run --enrichment-limit 3
+python3 -m cti_tracker.cli run --enrichment-limit 0
+
 # Inspect the results from the terminal.
 python3 -m cti_tracker.cli show --limit 15
 python3 -m cti_tracker.cli digest --since 2026-06-01T00:00:00Z
@@ -28,6 +32,9 @@ python3 -m cti_tracker.cli actors
 
 # Export an interoperable, validated STIX 2.1 bundle.
 python3 -m cti_tracker.cli export-stix --output unc-finder-bundle.json --pretty
+
+# Draft an evidence-grounded analysis when Anthropic credentials are configured.
+python3 -m cti_tracker.cli analyze
 
 # Start the local read-only dashboard.
 python3 -m cti_tracker.cli serve
@@ -57,6 +64,9 @@ unavailable. ThreatFox skips cleanly unless `THREATFOX_API_KEY` is configured.
   observations and tracking first seen, last seen, and times seen.
 - Produces terminal listings, change digests, and a local read-only dashboard.
 - Exports validated STIX 2.1 bundles for downstream CTI tools.
+- Passively enriches a bounded number of domains/IPs through RDAP.org and
+  crt.sh, then correlates indicators only on shared published evidence.
+- Optionally drafts cited analysis through Anthropic's Messages API.
 
 ## Track other actors
 
@@ -70,7 +80,9 @@ python3 -m cti_tracker.cli --actor-config your-actors.json run
 ```
 
 Optional: copy `.env.example` to `.env` and add free API keys to enable
-keyed collectors (e.g. ThreatFox).
+keyed collectors (e.g. ThreatFox). LLM analysis requires both
+`ANTHROPIC_API_KEY` and an explicit `ANTHROPIC_MODEL`; without them, the
+analyst skips cleanly and still prints deterministic store totals.
 
 ## How it works
 
@@ -87,12 +99,8 @@ public sources → collector agents → IOC extraction/tagging
 
 ## Next milestones
 
-1. **Add passive enrichment and correlation.** Enrich stored indicators using
-   published WHOIS, ASN, passive DNS, and certificate-transparency data, then
-   link infrastructure through shared attributes. No active probing.
-2. **Add an LLM analyst after the evidence layer is strong.** Generate cited
-   narratives and proposed pivots from stored evidence; the model must not
-   invent attribution or silently turn suggestions into network activity.
+1. Add more passive sources and confidence scoring for correlations.
+2. Add analyst review/export workflows for generated narratives.
 
 ## Working with an AI assistant
 

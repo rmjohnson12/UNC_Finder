@@ -89,6 +89,39 @@ class Store:
             out.append(d)
         return out
 
+    def paged(
+        self, limit: int = 100, offset: int = 0, stix_type: str | None = None
+    ) -> list[dict]:
+        """Return a deterministic page of objects, optionally filtered by type."""
+        where = "WHERE type = ?" if stix_type else ""
+        params: tuple = (stix_type, limit, offset) if stix_type else (limit, offset)
+        cur = self.conn.execute(
+            "SELECT json, first_seen, last_seen, times_seen FROM objects "
+            f"{where} ORDER BY last_seen DESC, id LIMIT ? OFFSET ?",
+            params,
+        )
+        out: list[dict] = []
+        for row in cur.fetchall():
+            item = json.loads(row["json"])
+            item["_first_seen"] = row["first_seen"]
+            item["_last_seen"] = row["last_seen"]
+            item["_times_seen"] = row["times_seen"]
+            out.append(item)
+        return out
+
+    def count(self, stix_type: str | None = None) -> int:
+        if stix_type:
+            row = self.conn.execute(
+                "SELECT COUNT(*) AS c FROM objects WHERE type = ?", (stix_type,)
+            ).fetchone()
+        else:
+            row = self.conn.execute("SELECT COUNT(*) AS c FROM objects").fetchone()
+        return int(row["c"])
+
+    def contains(self, object_id: str) -> bool:
+        row = self.conn.execute("SELECT 1 FROM objects WHERE id = ?", (object_id,)).fetchone()
+        return row is not None
+
     def changed_since(self, since: str, limit: int = 100) -> list[dict]:
         """Return objects first observed or observed again since a timestamp."""
         cur = self.conn.execute(

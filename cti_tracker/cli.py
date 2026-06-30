@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 
 from .config import ACTORS, Actor, load_actors
 from .orchestrator import Orchestrator
+from .agents.analyst import AnalystAgent
+from .agents.base import AgentContext
 from .store import DEFAULT_DB, Store
 
 # Optional: load a local .env if python-dotenv is installed. Not required.
@@ -31,6 +33,7 @@ def cmd_run(args: argparse.Namespace) -> None:
     config: dict = {"actors": configured_actors(args)}
     if args.cisa_feed:
         config["cisa_feed_url"] = args.cisa_feed
+    config["enrichment_limit"] = args.enrichment_limit
     orch = Orchestrator(store, config=config)
     results = orch.run(dry_run=args.dry_run)
     for r in results:
@@ -116,6 +119,18 @@ def cmd_export_stix(args: argparse.Namespace) -> None:
     print(f"Exported {count} STIX 2.1 object(s) to {destination}", file=sys.stderr)
 
 
+def cmd_analyze(args: argparse.Namespace) -> None:
+    store = Store(args.db)
+    try:
+        result = AnalystAgent().run(AgentContext(store=store))
+    finally:
+        store.close()
+    for note in result.notes:
+        print(note)
+    for error in result.errors:
+        print(f"ERROR: {error}", file=sys.stderr)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cti-tracker", description="Configurable passive CTI tracker"
@@ -130,6 +145,12 @@ def build_parser() -> argparse.ArgumentParser:
     run = sub.add_parser("run", help="run all collectors once")
     run.add_argument("--dry-run", action="store_true", help="collect but don't persist")
     run.add_argument("--cisa-feed", default=None, help="override CISA feed URL")
+    run.add_argument(
+        "--enrichment-limit",
+        type=int,
+        default=3,
+        help="maximum unenriched domain/IP indicators per run (0 disables)",
+    )
     run.set_defaults(func=cmd_run)
 
     show = sub.add_parser("show", help="show recent objects")
@@ -153,6 +174,9 @@ def build_parser() -> argparse.ArgumentParser:
     export_stix.add_argument("--output", "-o", default="unc-finder-bundle.json")
     export_stix.add_argument("--pretty", action="store_true", help="indent and sort JSON output")
     export_stix.set_defaults(func=cmd_export_stix)
+
+    analyze = sub.add_parser("analyze", help="draft analysis from stored, cited evidence")
+    analyze.set_defaults(func=cmd_analyze)
     return p
 
 

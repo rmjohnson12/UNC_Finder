@@ -4,13 +4,21 @@ from __future__ import annotations
 import html
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from .store import Store
 
 
-def render_dashboard(store: Store) -> str:
+def render_dashboard(
+    store: Store, page: int = 1, stix_type: str | None = None, page_size: int = 100
+) -> str:
     counts = store.counts_by_type()
-    objects = store.recent(100)
+    valid_type = stix_type if stix_type in counts else None
+    total = store.count(valid_type)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = min(max(1, page), total_pages)
+    offset = (page - 1) * page_size
+    objects = store.paged(page_size, offset, valid_type)
     cards = "".join(
         f'<div class="card"><strong>{count}</strong><span>{html.escape(kind)}</span></div>'
         for kind, count in counts.items()
@@ -37,6 +45,27 @@ def render_dashboard(store: Store) -> str:
             "</tr>"
         )
     table_rows = "".join(rows) or '<tr><td colspan="5">No intelligence collected yet.</td></tr>'
+    filter_links = ['<a class="filter" href="/">all</a>']
+    filter_links.extend(
+        f'<a class="filter" href="/?{urlencode({"type": kind})}">{html.escape(kind)}</a>'
+        for kind in counts
+    )
+    filters = "".join(filter_links)
+    start = offset + 1 if total else 0
+    end = min(offset + len(objects), total)
+    nav: list[str] = []
+    if page > 1:
+        query = {"page": page - 1}
+        if valid_type:
+            query["type"] = valid_type
+        nav.append(f'<a href="/?{urlencode(query)}">← previous</a>')
+    nav.append(f"<span>page {page} of {total_pages}</span>")
+    if page < total_pages:
+        query = {"page": page + 1}
+        if valid_type:
+            query["type"] = valid_type
+        nav.append(f'<a href="/?{urlencode(query)}">next →</a>')
+    pagination = "".join(nav)
 
     return f"""<!doctype html>
 <html lang="en">
@@ -66,6 +95,10 @@ def render_dashboard(store: Store) -> str:
     th {{ color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; }}
     tr:last-child td {{ border-bottom:0; }} a {{ color:var(--accent); }}
     .pill {{ border:1px solid #3d6170; border-radius:999px; padding:3px 8px; font-size:12px; }}
+    .toolbar,.pagination {{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:16px 0; }}
+    .filter,.pagination a {{ color:var(--accent); border:1px solid var(--line); border-radius:999px;
+      padding:5px 10px; text-decoration:none; }}
+    .pagination {{ justify-content:space-between; }}
     footer {{ color:var(--muted); margin-top:16px; font-size:12px; }}
     @media (max-width:700px) {{ header {{ align-items:start; flex-direction:column; }} }}
   </style>
@@ -75,10 +108,12 @@ def render_dashboard(store: Store) -> str:
     indicators, and relationships from the local SQLite store.</p></div>
     <div class="status">● read-only dashboard</div></header>
   <section class="cards">{cards}</section>
+  <section class="toolbar"><strong>Showing {start}–{end} of {total}</strong>{filters}</section>
   <section class="table-wrap"><table>
     <thead><tr><th>Type</th><th>Object</th><th>Actors</th><th>Seen</th><th>Last observed</th></tr></thead>
     <tbody>{table_rows}</tbody>
   </table></section>
+  <nav class="pagination">{pagination}</nav>
   <footer>Refreshes every 30 seconds · No active infrastructure access</footer>
 </main></body></html>"""
 
@@ -86,19 +121,36 @@ def render_dashboard(store: Store) -> str:
 def make_handler(db_path: str) -> type[BaseHTTPRequestHandler]:
     class DashboardHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
-            if self.path not in {"/", "/api/summary", "/api/objects"}:
+            request = urlsplit(self.path)
+            if request.path not in {"/", "/api/summary", "/api/objects"}:
                 self.send_error(404)
                 return
+            query = parse_qs(request.query)
+            try:
+                page = max(1, int(query.get("page", ["1"])[0]))
+                limit = min(500, max(1, int(query.get("limit", ["100"])[0])))
+                offset = max(0, int(query.get("offset", ["0"])[0]))
+            except ValueError:
+                self.send_error(400, "page, limit, and offset must be integers")
+                return
+            stix_type = query.get("type", [None])[0]
             store = Store(db_path)
             try:
-                if self.path == "/":
-                    body = render_dashboard(store).encode("utf-8")
+                if request.path == "/":
+                    body = render_dashboard(store, page, stix_type).encode("utf-8")
                     content_type = "text/html; charset=utf-8"
-                elif self.path == "/api/summary":
+                elif request.path == "/api/summary":
                     body = json.dumps(store.counts_by_type()).encode("utf-8")
                     content_type = "application/json"
                 else:
-                    body = json.dumps(store.recent(100)).encode("utf-8")
+                    body = json.dumps(
+                        {
+                            "total": store.count(stix_type),
+                            "limit": limit,
+                            "offset": offset,
+                            "objects": store.paged(limit, offset, stix_type),
+                        }
+                    ).encode("utf-8")
                     content_type = "application/json"
             finally:
                 store.close()

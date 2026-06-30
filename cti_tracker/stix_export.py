@@ -141,6 +141,22 @@ def _convert_relationship(item: dict[str, Any]) -> dict[str, Any]:
     return target
 
 
+def _convert_note(item: dict[str, Any]) -> dict[str, Any]:
+    target = _common(item)
+    target.update(
+        {
+            "content": str(item["content"]),
+            "object_refs": [str(ref) for ref in item.get("object_refs", [])],
+        }
+    )
+    abstract = str(item.get("abstract", "")).strip()
+    if abstract:
+        target["abstract"] = abstract
+    _labels(item, target)
+    _external_reference(item, target)
+    return target
+
+
 def build_bundle(store: Store) -> dict[str, Any]:
     """Build and validate a STIX 2.1 bundle from every persisted object."""
     items = store.all()
@@ -173,6 +189,8 @@ def build_bundle(store: Store) -> dict[str, Any]:
             )
         elif item_type == "relationship":
             converted.append(_convert_relationship(item))
+        elif item_type == "note":
+            converted.append(_convert_note(item))
 
     bundle: dict[str, Any] = {
         "type": "bundle",

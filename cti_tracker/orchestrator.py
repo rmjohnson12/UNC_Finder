@@ -10,6 +10,8 @@ from __future__ import annotations
 from .agents.analyst import AnalystAgent
 from .agents.base import Agent, AgentContext, AgentResult
 from .agents.certua_collector import CERTUACollector
+from .agents.correlation import CorrelationAgent
+from .agents.enrichment import EnrichmentAgent
 from .agents.cisa_collector import CISAAdvisoryCollector
 from .agents.threatfox_collector import ThreatFoxCollector
 from .store import Store
@@ -21,6 +23,8 @@ def default_agents() -> list[Agent]:
         CISAAdvisoryCollector(),
         CERTUACollector(),
         ThreatFoxCollector(),
+        EnrichmentAgent(),
+        CorrelationAgent(),
         AnalystAgent(),
     ]
 
