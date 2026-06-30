@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>SAMPLE CISA Cybersecurity Advisories (fixture)</title>
+  <subtitle>Bundled offline sample so the suite runs end-to-end. Not live data.</subtitle>
+  <updated>2026-06-26T12:00:00Z</updated>
+  <entry>
+    <title>Russian Intelligence Phishing Targeting Signal and WhatsApp Accounts (UNC5792, UNC4221)</title>
+    <link href="https://example.invalid/advisories/psa-i-062626-sample"/>
+    <id>urn:sample:psa-i-062626</id>
+    <updated>2026-06-26T12:00:00Z</updated>
+    <published>2026-06-26T12:00:00Z</published>
+    <summary>SAMPLE FIXTURE. FBI and CISA describe phishing campaigns abusing Signal device-linking and theft of Signal Backup Recovery Keys, attributed to UAC-0195 and UAC-0185. For wiring/testing only; replace with the live CISA feed.</summary>
+  </entry>
+  <entry>
+    <title>Critical Vulnerability in Example Industrial Controller (unrelated)</title>
+    <link href="https://example.invalid/advisories/ics-sample-001"/>
+    <id>urn:sample:ics-001</id>
+    <updated>2026-06-25T09:00:00Z</updated>
+    <published>2026-06-25T09:00:00Z</published>
+    <summary>SAMPLE FIXTURE. An unrelated ICS advisory included to demonstrate that the collector filters out advisories with no tracked-actor match.</summary>
+  </entry>
+</feed>
