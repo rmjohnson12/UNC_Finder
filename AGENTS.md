@@ -33,11 +33,12 @@ legibility, and a clean design story over feature count.
 cti_tracker/
   config.py        # tracked actors (UNC5792/UNC4221 + aliases) and source URLs
   ioc.py           # passive IOC extraction and defang normalization
+  stix_export.py   # validated STIX 2.1 bundle conversion/export
   models.py        # STIX-lite dataclasses (Indicator/ThreatActor/Report/Relationship)
   tagging.py       # keyword correlation: free text -> actor names
   store.py         # SQLite persistence with upsert + times_seen tracking
   orchestrator.py  # builds context, runs agents in order, returns results
-  cli.py           # `python3 -m cti_tracker.cli run|show|digest|actors|serve`
+  cli.py           # `python3 -m cti_tracker.cli run|show|digest|export-stix|actors|serve`
   web.py           # local read-only HTML dashboard + JSON endpoints
   agents/
     base.py            # Agent ABC, CollectorAgent base, AgentContext, AgentResult
@@ -93,7 +94,7 @@ OpenCTI/MISP/ATT&CK later.
 
 - **Phase 1 (current):** end-to-end skeleton — CISA collector + SQLite + CLI. ✅
 - **Phase 2 (current):** CERT-UA collection, IOC extraction, change digest,
-  configurable actor profiles, local dashboard, STIX normalization polish,
+  configurable actor profiles, local dashboard, STIX 2.1 bundle export,
   and more collectors (AlienVault OTX, CISA KEV JSON).
 - **Phase 3:** enrichment + correlation — for each new domain/IP, pull WHOIS,
   ASN, passive DNS, and **certificate transparency via crt.sh** (keyless);

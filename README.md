@@ -26,6 +26,9 @@ python3 -m cti_tracker.cli show --limit 15
 python3 -m cti_tracker.cli digest --since 2026-06-01T00:00:00Z
 python3 -m cti_tracker.cli actors
 
+# Export an interoperable, validated STIX 2.1 bundle.
+python3 -m cti_tracker.cli export-stix --output unc-finder-bundle.json --pretty
+
 # Start the local read-only dashboard.
 python3 -m cti_tracker.cli serve
 ```
@@ -53,6 +56,7 @@ unavailable. ThreatFox skips cleanly unless `THREATFOX_API_KEY` is configured.
 - Stores deterministic STIX-lite objects in SQLite, de-duplicating repeated
   observations and tracking first seen, last seen, and times seen.
 - Produces terminal listings, change digests, and a local read-only dashboard.
+- Exports validated STIX 2.1 bundles for downstream CTI tools.
 
 ## Track other actors
 
@@ -83,13 +87,10 @@ public sources → collector agents → IOC extraction/tagging
 
 ## Next milestones
 
-1. **Export proper STIX 2.1 bundles.** Preserve deterministic identities and
-   provenance while producing interoperable output for OpenCTI, MISP, and
-   other CTI tooling.
-2. **Add passive enrichment and correlation.** Enrich stored indicators using
+1. **Add passive enrichment and correlation.** Enrich stored indicators using
    published WHOIS, ASN, passive DNS, and certificate-transparency data, then
    link infrastructure through shared attributes. No active probing.
-3. **Add an LLM analyst after the evidence layer is strong.** Generate cited
+2. **Add an LLM analyst after the evidence layer is strong.** Generate cited
    narratives and proposed pivots from stored evidence; the model must not
    invent attribution or silently turn suggestions into network activity.
 

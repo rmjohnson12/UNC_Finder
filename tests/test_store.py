@@ -59,3 +59,16 @@ def test_changed_since_distinguishes_new_and_reseen():
     finally:
         store.close()
         os.unlink(path)
+
+
+def test_all_returns_every_object_in_stable_order():
+    store, path = _store()
+    try:
+        store.upsert(Indicator(value="b.example", ioc_type="domain-name"))
+        store.upsert(Indicator(value="a.example", ioc_type="domain-name"))
+        rows = store.all()
+        assert len(rows) == 2
+        assert [row["id"] for row in rows] == sorted(row["id"] for row in rows)
+    finally:
+        store.close()
+        os.unlink(path)

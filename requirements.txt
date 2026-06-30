@@ -3,3 +3,4 @@ feedparser>=6.0
 # dev / optional
 pytest>=8.0
 python-dotenv>=1.0
+stix2>=3.0,<4

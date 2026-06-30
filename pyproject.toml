@@ -7,7 +7,7 @@ name = "cti-tracker"
 version = "0.1.0"
 description = "Agent-shaped CTI tracking suite for UNC5792/UNC4221 (passive, OSINT)"
 requires-python = ">=3.10"
-dependencies = ["requests>=2.31", "feedparser>=6.0"]
+dependencies = ["requests>=2.31", "feedparser>=6.0", "stix2>=3.0,<4"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "python-dotenv>=1.0"]

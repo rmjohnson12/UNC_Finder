@@ -124,5 +124,9 @@ class Store:
         )
         return [json.loads(r["json"]) for r in cur.fetchall()]
 
+    def all(self) -> list[dict]:
+        cur = self.conn.execute("SELECT json FROM objects ORDER BY type, id")
+        return [json.loads(row["json"]) for row in cur.fetchall()]
+
     def close(self) -> None:
         self.conn.close()

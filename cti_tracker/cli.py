@@ -4,11 +4,13 @@
     python3 -m cti_tracker.cli run --dry-run
     python3 -m cti_tracker.cli show --limit 15
     python3 -m cti_tracker.cli digest --since 2026-06-01T00:00:00Z
+    python3 -m cti_tracker.cli export-stix --output unc-finder-bundle.json --pretty
     python3 -m cti_tracker.cli actors
 """
 from __future__ import annotations
 
 import argparse
+import sys
 from datetime import datetime, timezone
 
 from .config import ACTORS, Actor, load_actors
@@ -102,6 +104,18 @@ def cmd_serve(args: argparse.Namespace) -> None:
     serve_dashboard(args.db, args.host, args.port)
 
 
+def cmd_export_stix(args: argparse.Namespace) -> None:
+    from .stix_export import write_bundle
+
+    store = Store(args.db)
+    try:
+        count = write_bundle(store, args.output, args.pretty)
+    finally:
+        store.close()
+    destination = "stdout" if args.output == "-" else args.output
+    print(f"Exported {count} STIX 2.1 object(s) to {destination}", file=sys.stderr)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cti-tracker", description="Configurable passive CTI tracker"
@@ -134,6 +148,11 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", default=8080, type=int)
     serve.set_defaults(func=cmd_serve)
+
+    export_stix = sub.add_parser("export-stix", help="export a validated STIX 2.1 bundle")
+    export_stix.add_argument("--output", "-o", default="unc-finder-bundle.json")
+    export_stix.add_argument("--pretty", action="store_true", help="indent and sort JSON output")
+    export_stix.set_defaults(func=cmd_export_stix)
     return p
 
 
