@@ -32,18 +32,22 @@ legibility, and a clean design story over feature count.
 ```
 cti_tracker/
   config.py        # tracked actors (UNC5792/UNC4221 + aliases) and source URLs
+  ioc.py           # passive IOC extraction and defang normalization
   models.py        # STIX-lite dataclasses (Indicator/ThreatActor/Report/Relationship)
   tagging.py       # keyword correlation: free text -> actor names
   store.py         # SQLite persistence with upsert + times_seen tracking
   orchestrator.py  # builds context, runs agents in order, returns results
-  cli.py           # `python -m cti_tracker.cli run|show|actors`
+  cli.py           # `python3 -m cti_tracker.cli run|show|digest|actors|serve`
+  web.py           # local read-only HTML dashboard + JSON endpoints
   agents/
     base.py            # Agent ABC, CollectorAgent base, AgentContext, AgentResult
     cisa_collector.py  # WORKING, keyless collector (with offline sample fallback)
+    certua_collector.py  # official CERT-UA search/article collector
     threatfox_collector.py  # EXAMPLE keyed collector (skips without API key)
     analyst.py         # summary agent; Phase 5 LLM hook lives here
   data/sample_cisa_feed.xml  # offline fixture so the suite always runs
 tests/
+actor-config.example.json  # template for tracking other documented actors
 ```
 
 **Core idea:** every unit of work is an `Agent` with one responsibility and a
@@ -69,7 +73,8 @@ OpenCTI/MISP/ATT&CK later.
   errors, not exceptions that bubble up.
 - New keyed sources: import the network library lazily inside `collect` and
   **skip cleanly with a note** when the key is absent (see ThreatFox).
-- Keep `config.ACTORS` the single source of truth for the actor set.
+- Keep `config.ACTORS` as the default catalog; a JSON profile may override it at
+  runtime through `--actor-config` so the engine can track other groups.
 - Add/extend tests for any new model logic or store behavior.
 
 ## How to add a new collector (the recipe)
@@ -87,8 +92,9 @@ OpenCTI/MISP/ATT&CK later.
 ## Roadmap (phases) and good first tasks
 
 - **Phase 1 (current):** end-to-end skeleton — CISA collector + SQLite + CLI. ✅
-- **Phase 2:** STIX normalization polish + more collectors (AlienVault OTX,
-  CERT-UA, CISA KEV JSON) + dedup hardening.
+- **Phase 2 (current):** CERT-UA collection, IOC extraction, change digest,
+  configurable actor profiles, local dashboard, STIX normalization polish,
+  and more collectors (AlienVault OTX, CISA KEV JSON).
 - **Phase 3:** enrichment + correlation — for each new domain/IP, pull WHOIS,
   ASN, passive DNS, and **certificate transparency via crt.sh** (keyless);
   build an `EnrichmentAgent` and a `CorrelationAgent` that links infrastructure

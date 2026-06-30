@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from .agents.analyst import AnalystAgent
 from .agents.base import Agent, AgentContext, AgentResult
+from .agents.certua_collector import CERTUACollector
 from .agents.cisa_collector import CISAAdvisoryCollector
 from .agents.threatfox_collector import ThreatFoxCollector
 from .store import Store
@@ -18,6 +19,7 @@ def default_agents() -> list[Agent]:
     """Collectors first, analyst last so the run ends with a summary."""
     return [
         CISAAdvisoryCollector(),
+        CERTUACollector(),
         ThreatFoxCollector(),
         AnalystAgent(),
     ]

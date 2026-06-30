@@ -6,7 +6,9 @@ collectors and correlation logic stay in sync.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -14,6 +16,7 @@ class Actor:
     primary: str
     aliases: tuple[str, ...] = ()
     note: str = ""
+    keywords: tuple[str, ...] = ()
 
     @property
     def all_names(self) -> tuple[str, ...]:
@@ -32,27 +35,39 @@ ACTORS: tuple[Actor, ...] = (
         "UNC4221",
         ("UAC-0185",),
         "Russian military-linked; Signal phishing kit mimicking Kropyva; PINPOINT geolocation payload.",
+        ("stalecookie", "pinpoint", "tinywhale", "kropyva"),
     ),
 )
 
-# Extra keywords associated with the actors (malware/tooling/themes) used to
-# correlate incoming data. Map keyword -> primary actor name.
-_EXTRA_KEYWORDS: dict[str, str] = {
-    "stalecookie": "UNC4221",
-    "pinpoint": "UNC4221",
-    "tinywhale": "UNC4221",
-    "kropyva": "UNC4221",
-}
 
-
-def actor_keywords() -> dict[str, str]:
+def actor_keywords(actors: tuple[Actor, ...] = ACTORS) -> dict[str, str]:
     """Lowercase keyword/alias -> primary actor name, for correlation."""
     out: dict[str, str] = {}
-    for actor in ACTORS:
-        for name in actor.all_names:
+    for actor in actors:
+        for name in (*actor.all_names, *actor.keywords):
             out[name.lower()] = actor.primary
-    out.update(_EXTRA_KEYWORDS)
     return out
+
+
+def load_actors(path: str) -> tuple[Actor, ...]:
+    """Load an actor catalog from a small JSON profile."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    records = payload.get("actors")
+    if not isinstance(records, list) or not records:
+        raise ValueError("actor config must contain a non-empty 'actors' list")
+    actors: list[Actor] = []
+    for record in records:
+        if not isinstance(record, dict) or not str(record.get("primary", "")).strip():
+            raise ValueError("every actor requires a non-empty 'primary' name")
+        actors.append(
+            Actor(
+                primary=str(record["primary"]).strip(),
+                aliases=tuple(str(value).strip() for value in record.get("aliases", [])),
+                note=str(record.get("note", "")).strip(),
+                keywords=tuple(str(value).strip() for value in record.get("keywords", [])),
+            )
+        )
+    return tuple(actors)
 
 
 # --- Source feed configuration -------------------------------------------------
@@ -61,3 +76,4 @@ def actor_keywords() -> dict[str, str]:
 # fails, so the suite always runs end-to-end on first try.
 CISA_ADVISORIES_FEED = "https://www.cisa.gov/cybersecurity-advisories/all.xml"
 THREATFOX_API = "https://threatfox-api.abuse.ch/api/v1/"
+CERT_UA_API = "https://cert.gov.ua/api"

@@ -89,6 +89,35 @@ class Store:
             out.append(d)
         return out
 
+    def changed_since(self, since: str, limit: int = 100) -> list[dict]:
+        """Return objects first observed or observed again since a timestamp."""
+        cur = self.conn.execute(
+            "SELECT json, first_seen, last_seen, times_seen "
+            "FROM objects WHERE last_seen >= ? "
+            "ORDER BY last_seen DESC LIMIT ?",
+            (since, limit),
+        )
+        out: list[dict] = []
+        for row in cur.fetchall():
+            item = json.loads(row["json"])
+            item["_first_seen"] = row["first_seen"]
+            item["_last_seen"] = row["last_seen"]
+            item["_times_seen"] = row["times_seen"]
+            item["_change"] = "new" if row["first_seen"] >= since else "re-seen"
+            out.append(item)
+        return out
+
+    def change_counts_since(self, since: str) -> tuple[int, int]:
+        """Return total new and re-seen object counts after a timestamp."""
+        row = self.conn.execute(
+            "SELECT "
+            "SUM(CASE WHEN first_seen >= ? THEN 1 ELSE 0 END) AS new_count, "
+            "SUM(CASE WHEN first_seen < ? THEN 1 ELSE 0 END) AS reseen_count "
+            "FROM objects WHERE last_seen >= ?",
+            (since, since, since),
+        ).fetchone()
+        return int(row["new_count"] or 0), int(row["reseen_count"] or 0)
+
     def all_of_type(self, stix_type: str) -> list[dict]:
         cur = self.conn.execute(
             "SELECT json FROM objects WHERE type = ?", (stix_type,)

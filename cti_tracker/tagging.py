@@ -6,11 +6,11 @@ augment this with infrastructure pivoting and LLM-assisted entity extraction.
 """
 from __future__ import annotations
 
-from .config import actor_keywords
+from .config import ACTORS, Actor, actor_keywords
 
 
-def tag_text(text: str) -> list[str]:
+def tag_text(text: str, actors: tuple[Actor, ...] = ACTORS) -> list[str]:
     """Return sorted primary actor names whose keywords appear in `text`."""
     lowered = (text or "").lower()
-    hits = {actor for kw, actor in actor_keywords().items() if kw in lowered}
+    hits = {actor for kw, actor in actor_keywords(actors).items() if kw in lowered}
     return sorted(hits)

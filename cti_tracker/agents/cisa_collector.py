@@ -15,6 +15,8 @@ from pathlib import Path
 import feedparser
 
 from ..config import ACTORS, CISA_ADVISORIES_FEED
+from ..ioc import extract_iocs
+from ..models import Indicator
 from ..models import Relationship, Report, ThreatActor
 from ..tagging import tag_text
 from .base import AgentContext, CollectorAgent
@@ -29,6 +31,7 @@ class CISAAdvisoryCollector(CollectorAgent):
     )
 
     def collect(self, ctx: AgentContext):
+        actors = tuple(ctx.config.get("actors", ACTORS))
         feed_url = ctx.config.get("cisa_feed_url", CISA_ADVISORIES_FEED)
         feed = self._load(feed_url)
 
@@ -37,7 +40,7 @@ class CISAAdvisoryCollector(CollectorAgent):
         # Emit the tracked actors so relationships have valid targets. Stable
         # ids mean these upsert as "seen" on later runs rather than duplicate.
         actor_id = {}
-        for actor in ACTORS:
+        for actor in actors:
             ta = ThreatActor(
                 name=actor.primary, aliases=list(actor.aliases), source=self.name
             )
@@ -51,11 +54,21 @@ class CISAAdvisoryCollector(CollectorAgent):
             link = getattr(entry, "link", "")
             published = getattr(entry, "published", "") or getattr(entry, "updated", "")
 
-            actors_hit = tag_text(f"{title} {summary}")
+            actors_hit = tag_text(f"{title} {summary}", actors)
             if not actors_hit:
                 continue  # Phase 1: keep only actor-relevant advisories
             kept += 1
 
+            indicators = [
+                Indicator(
+                    value=value,
+                    ioc_type=ioc_type,
+                    source=self.name,
+                    labels=actors_hit,
+                    raw={"advisory_url": link},
+                )
+                for ioc_type, value in extract_iocs(f"{title} {summary}")
+            ]
             report = Report(
                 name=title,
                 description=summary[:1000],
@@ -63,9 +76,11 @@ class CISAAdvisoryCollector(CollectorAgent):
                 url=link,
                 source=self.name,
                 labels=actors_hit,
+                object_refs=[indicator.id for indicator in indicators],
                 raw={"title": title, "link": link},
             )
             objects.append(report)
+            objects.extend(indicators)
             for actor in actors_hit:
                 objects.append(
                     Relationship(

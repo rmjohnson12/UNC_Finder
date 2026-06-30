@@ -1,0 +1,10 @@
+{
+  "actors": [
+    {
+      "primary": "EXAMPLE-GROUP",
+      "aliases": ["UAC-0000", "Example Bear"],
+      "keywords": ["example-malware", "example-campaign"],
+      "note": "Replace this record with a publicly documented threat actor."
+    }
+  ]
+}

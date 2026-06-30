@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import os
 
-from ..config import THREATFOX_API, actor_keywords
+from ..config import ACTORS, THREATFOX_API, actor_keywords
 from ..models import Indicator
 from ..tagging import tag_text
 from .base import AgentContext, CollectorAgent
@@ -51,7 +51,8 @@ class ThreatFoxCollector(CollectorAgent):
         resp.raise_for_status()
         rows = (resp.json() or {}).get("data") or []
 
-        wanted = set(actor_keywords())
+        actors = tuple(ctx.config.get("actors", ACTORS))
+        wanted = set(actor_keywords(actors))
         objects: list = []
         for row in rows:
             tags = [str(t).lower() for t in (row.get("tags") or [])]
@@ -68,7 +69,7 @@ class ThreatFoxCollector(CollectorAgent):
                     value=str(row.get("ioc", "")),
                     ioc_type=ioc_type,
                     source=self.name,
-                    labels=tag_text(blob),
+                    labels=tag_text(blob, actors),
                     raw=row,
                 )
             )

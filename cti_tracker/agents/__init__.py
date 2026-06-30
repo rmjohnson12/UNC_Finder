@@ -1,5 +1,6 @@
 from .analyst import AnalystAgent
 from .base import Agent, AgentContext, AgentResult, CollectorAgent
+from .certua_collector import CERTUACollector
 from .cisa_collector import CISAAdvisoryCollector
 from .threatfox_collector import ThreatFoxCollector
 
@@ -10,5 +11,6 @@ __all__ = [
     "CollectorAgent",
     "AnalystAgent",
     "CISAAdvisoryCollector",
+    "CERTUACollector",
     "ThreatFoxCollector",
 ]

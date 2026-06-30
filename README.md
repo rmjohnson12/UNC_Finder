@@ -22,8 +22,20 @@ pip install -r requirements.txt
 python3 -m cti_tracker.cli run
 
 python3 -m cti_tracker.cli show --limit 15
+python3 -m cti_tracker.cli digest --since 2026-06-01T00:00:00Z
 python3 -m cti_tracker.cli actors
+python3 -m cti_tracker.cli serve
 pytest -q
+```
+
+Open `http://127.0.0.1:8080` for the local read-only dashboard. To track a
+different actor set, copy `actor-config.example.json`, edit the actors,
+aliases, and keywords, then add `--actor-config your-actors.json` before the
+subcommand:
+
+```bash
+python3 -m cti_tracker.cli --actor-config your-actors.json actors
+python3 -m cti_tracker.cli --actor-config your-actors.json run
 ```
 
 Optional: copy `.env.example` to `.env` and add free API keys to enable
@@ -43,8 +55,9 @@ collectors → orchestrator → SQLite store → analyst/output
 
 ## Roadmap
 
-1. **Phase 1 (this scaffold):** CISA collector + SQLite + CLI — runnable spine.
-2. **Phase 2:** more collectors (OTX, CERT-UA, CISA KEV) + STIX polish.
+1. **Phase 1:** CISA collector + SQLite + CLI — runnable spine.
+2. **Phase 2 (in progress):** CERT-UA collection, IOC extraction, change digest,
+   more collectors (OTX, CISA KEV), and STIX polish.
 3. **Phase 3:** enrichment + infrastructure correlation (WHOIS/ASN/passive DNS, crt.sh).
 4. **Phase 4:** Sigma/Suricata rule generation + change digests.
 5. **Phase 5:** LLM analyst (Anthropic API) for narrative + pivot suggestions.

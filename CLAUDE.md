@@ -7,6 +7,8 @@ The full project spec, architecture, guardrails, and roadmap live in
 
 - **Run:** `python3 -m cti_tracker.cli run`
 - **Inspect:** `python3 -m cti_tracker.cli show --limit 15`
+- **Digest:** `python3 -m cti_tracker.cli digest --since 2026-06-01T00:00:00Z`
+- **Dashboard:** `python3 -m cti_tracker.cli serve`
 - **List actors:** `python3 -m cti_tracker.cli actors`
 - **Test:** `pytest -q`
 
