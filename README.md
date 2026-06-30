@@ -1,37 +1,64 @@
-# cti-tracker
+# UNC Finder
 
 A small, **agent-shaped** cyber threat intelligence (CTI) suite for tracking the
 Russian state-linked groups **UNC5792** and **UNC4221** — the actors behind the
 2026 Signal/WhatsApp phishing spree — from **publicly reported** sources only.
 
-Built as a cybersecurity projects-class deliverable. It continuously collects,
-normalizes (STIX-lite), de-duplicates, correlates, and summarizes the actors'
-published footprint. **Passive collection only** — it never touches suspected
-attacker infrastructure. See [`AGENTS.md`](./AGENTS.md) for the full design.
+Built as a cybersecurity projects-class deliverable. Each run collects,
+normalizes (STIX-lite), de-duplicates, and summarizes the actors' published
+footprint. **Passive collection only** — it never touches suspected attacker
+infrastructure. See [`AGENTS.md`](./AGENTS.md) for the full design.
 
 ## Quick start
 
 ```bash
 git clone https://github.com/rmjohnson12/UNC_Finder.git
 cd UNC_Finder
-python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
-# Runs end-to-end on the first try — if the live CISA feed isn't reachable,
-# it falls back to a bundled sample feed so you always get output.
+# Collect from the configured public sources and persist to cti_tracker.db.
 python3 -m cti_tracker.cli run
 
+# Inspect the results from the terminal.
 python3 -m cti_tracker.cli show --limit 15
 python3 -m cti_tracker.cli digest --since 2026-06-01T00:00:00Z
 python3 -m cti_tracker.cli actors
+
+# Start the local read-only dashboard.
 python3 -m cti_tracker.cli serve
+```
+
+Open [http://127.0.0.1:8080](http://127.0.0.1:8080) while the dashboard is
+running. Press `Ctrl+C` to stop it.
+
+On Windows PowerShell, activate the environment with
+`.venv\Scripts\Activate.ps1`. To verify the installation on any platform:
+
+```bash
 pytest -q
 ```
 
-Open `http://127.0.0.1:8080` for the local read-only dashboard. To track a
-different actor set, copy `actor-config.example.json`, edit the actors,
-aliases, and keywords, then add `--actor-config your-actors.json` before the
-subcommand:
+The CISA collector falls back to a bundled sample if its live feed is
+unavailable. ThreatFox skips cleanly unless `THREATFOX_API_KEY` is configured.
+
+## What it does today
+
+- Collects actor-relevant public reporting from CISA and CERT-UA.
+- Optionally collects matching ThreatFox IOCs with an API key.
+- Extracts and normalizes hashes, URLs, domains, and IPv4 indicators.
+- Converts common defanged values such as `hxxps://example[.]com` without
+  connecting to them.
+- Stores deterministic STIX-lite objects in SQLite, de-duplicating repeated
+  observations and tracking first seen, last seen, and times seen.
+- Produces terminal listings, change digests, and a local read-only dashboard.
+
+## Track other actors
+
+UNC5792 and UNC4221 are the built-in profile, but the engine is not limited to
+them. Copy `actor-config.example.json`, edit its names, aliases, and keywords,
+then place `--actor-config` before the subcommand:
 
 ```bash
 python3 -m cti_tracker.cli --actor-config your-actors.json actors
@@ -44,23 +71,27 @@ keyed collectors (e.g. ThreatFox).
 ## How it works
 
 Every unit of work is an **Agent** with one job and a `run(ctx) -> AgentResult`.
-Collectors pull from a source and emit STIX-lite objects; the orchestrator
-persists them to SQLite (de-duplicating by deterministic id and tracking how
-often each is seen); the analyst agent summarizes. Adding capability means
-adding an agent — see the recipe in `AGENTS.md`.
+Collectors pull from a source and emit STIX-lite objects. The orchestrator
+persists them to SQLite, de-duplicating by deterministic ID and tracking how
+often each object is seen. The current analyst reports store totals. Adding a
+capability means adding an agent; see the recipe in `AGENTS.md`.
 
 ```
-collectors → orchestrator → SQLite store → analyst/output
+public sources → collector agents → IOC extraction/tagging
+               → SQLite store → digest/dashboard/analyst
 ```
 
-## Roadmap
+## Next milestones
 
-1. **Phase 1:** CISA collector + SQLite + CLI — runnable spine.
-2. **Phase 2 (in progress):** CERT-UA collection, IOC extraction, change digest,
-   more collectors (OTX, CISA KEV), and STIX polish.
-3. **Phase 3:** enrichment + infrastructure correlation (WHOIS/ASN/passive DNS, crt.sh).
-4. **Phase 4:** Sigma/Suricata rule generation + change digests.
-5. **Phase 5:** LLM analyst (Anthropic API) for narrative + pivot suggestions.
+1. **Export proper STIX 2.1 bundles.** Preserve deterministic identities and
+   provenance while producing interoperable output for OpenCTI, MISP, and
+   other CTI tooling.
+2. **Add passive enrichment and correlation.** Enrich stored indicators using
+   published WHOIS, ASN, passive DNS, and certificate-transparency data, then
+   link infrastructure through shared attributes. No active probing.
+3. **Add an LLM analyst after the evidence layer is strong.** Generate cited
+   narratives and proposed pivots from stored evidence; the model must not
+   invent attribution or silently turn suggestions into network activity.
 
 ## Working with an AI assistant
 
